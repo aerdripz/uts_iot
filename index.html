@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>🌌 AeroSphere: Sensor Monitoring</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Scrollbar kustom agar sesuai tema gelap */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #1e293b; } /* slate-800 */
+    ::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 4px; } /* cyan-400 */
+    ::-webkit-scrollbar-thumb:hover { background: #7dd3fc; } /* cyan-300 */
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-slate-100 font-sans antialiased">
+  <div class="max-w-6xl mx-auto p-8">
+    
+    <h1 class="text-5xl font-extrabold mb-4 text-center text-white">
+      🌌 AeroSphere
+    </h1>
+    <p class="text-xl font-medium text-slate-400 text-center mb-10">
+      Sensor Monitoring Dashboard
+    </p>
+
+    <div id="summary" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      
+      <div class="bg-slate-800/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 transition-all duration-300
+                  hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10">
+        <h3 class="text-md font-medium text-slate-400 mb-2 text-center">Suhu Terminal</h3>
+        <p id="suhu" class="text-5xl font-bold text-cyan-400 text-center drop-shadow-md">-- °C</p>
+      </div>
+      
+      <div class="bg-slate-800/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 transition-all duration-300
+                  hover:border-fuchsia-400/50 hover:shadow-lg hover:shadow-fuchsia-500/10">
+        <h3 class="text-md font-medium text-slate-400 mb-2 text-center">Kelembapan Kabin</h3>
+        <p id="humidity" class="text-5xl font-bold text-fuchsia-400 text-center drop-shadow-md">-- %</p>
+      </div>
+
+      <div class="bg-slate-800/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 transition-all duration-300
+                  hover:border-amber-400/50 hover:shadow-lg hover:shadow-amber-500/10">
+        <h3 class="text-md font-medium text-slate-400 mb-2 text-center">Radiasi Cahaya</h3>
+        <p id="lux" class="text-5xl font-bold text-amber-300 text-center drop-shadow-md">-- Lux</p>
+      </div>
+    </div>
+
+    <div class="bg-slate-800/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 mb-8">
+      <h2 class="text-2xl font-bold mb-4 text-white">📊 Log Sensor Telemetri</h2>
+      <canvas id="chartSensor" height="100"></canvas>
+    </div>
+
+    <div class="bg-slate-800/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6">
+      <h2 class="text-2xl font-bold mb-4 text-white">📋 Arsip Data Sensor</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="bg-slate-700/50">
+            <tr>
+              <th class="py-3 px-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">ID Log</th>
+              <th class="py-3 px-4 text-center text-xs font-medium text-slate-300 uppercase tracking-wider">Suhu (°C)</th>
+              <th class="py-3 px-4 text-center text-xs font-medium text-slate-300 uppercase tracking-wider">Kelembapan (%)</th>
+              <th class="py-3 px-4 text-center text-xs font-medium text-slate-300 uppercase tracking-wider">Lux</th>
+              <th class="py-3 px-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Waktu</th>
+            </tr>
+          </thead>
+          <tbody id="data-table" class="divide-y divide-slate-700/50">
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const suhuElem = document.getElementById('suhu');
+    const humElem = document.getElementById('humidity');
+    const luxElem = document.getElementById('lux');
+    const tableBody = document.getElementById('data-table');
+
+    // Setup Chart.js (Tema Stellaris/Gelap)
+    const ctx = document.getElementById('chartSensor').getContext('2d');
+
+    // Gradien untuk Suhu (Cyan)
+    const gradientCyan = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientCyan.addColorStop(0, 'rgba(34, 211, 238, 0.4)'); // cyan-400
+    gradientCyan.addColorStop(1, 'rgba(34, 211, 238, 0.01)');
+
+    // Gradien untuk Kelembapan (Fuchsia)
+    const gradientFuchsia = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientFuchsia.addColorStop(0, 'rgba(232, 121, 249, 0.4)'); // fuchsia-400
+    gradientFuchsia.addColorStop(1, 'rgba(232, 121, 249, 0.01)');
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { 
+            label: 'Suhu (°C)', 
+            data: [], 
+            borderColor: '#22d3ee', // cyan-400
+            backgroundColor: gradientCyan,
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointBackgroundColor: '#0f172a',
+            pointBorderColor: '#22d3ee',
+            pointHoverRadius: 6
+          },
+          { 
+            label: 'Kelembapan (%)', 
+            data: [], 
+            borderColor: '#e879f9', // fuchsia-400
+            backgroundColor: gradientFuchsia,
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointBackgroundColor: '#0f172a',
+            pointBorderColor: '#e879f9',
+            pointHoverRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: '#e2e8f0', // slate-200
+              font: { size: 14 }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.8)', // slate-900
+            titleColor: '#ffffff',
+            bodyColor: '#e2e8f0',
+            borderColor: '#334155', // slate-700
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 8
+          }
+        },
+        scales: {
+          y: { 
+            beginAtZero: true,
+            grid: { color: 'rgba(100, 116, 139, 0.2)' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: {
+            grid: { color: 'rgba(100, 116, 139, 0.2)' },
+            ticks: { color: '#94a3b8' }
+          }
+        },
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+      }
+    });
+
+    async function loadData() {
+      try {
+        const res = await fetch('api.php');
+        const data = await res.json();
+
+        if (!data || !data.length) return;
+
+        const latest = data[0];
+        suhuElem.textContent = parseFloat(latest.suhu).toFixed(1) + ' °C';
+        humElem.textContent = parseFloat(latest.humidity).toFixed(1) + ' %';
+        luxElem.textContent = parseFloat(latest.lux).toFixed(0) + ' Lux';
+
+        // Update Tabel
+        tableBody.innerHTML = data.map(row => `
+          <tr class="hover:bg-slate-700/50 transition-colors duration-200">
+            <td class="py-3 px-4 text-sm text-slate-300">${row.id}</td>
+            <td class="py-3 px-4 text-center font-medium text-cyan-400">${parseFloat(row.suhu).toFixed(1)}</td>
+            <td class="py-3 px-4 text-center font-medium text-fuchsia-400">${parseFloat(row.humidity).toFixed(1)}</td>
+            <td class="py-3 px-4 text-center font-medium text-amber-300">${parseFloat(row.lux).toFixed(0)}</td>
+            <td class="py-3 px-4 text-sm text-slate-400">${row.timestamp}</td>
+          </tr>
+        `).join('');
+
+        // Update Chart
+        const latestData = data.slice(0, 10).reverse();
+        chart.data.labels = latestData.map(d => d.timestamp.split(' ')[1]);
+        chart.data.datasets[0].data = latestData.map(d => d.suhu);
+        chart.data.datasets[1].data = latestData.map(d => d.humidity);
+        chart.update();
+
+      } catch (error) {
+        console.error("Gagal memuat data telemetri:", error);
+      }
+    }
+
+    loadData();
+    setInterval(loadData, 5000);
+  </script>
+</body>
+</html>
